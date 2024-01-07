@@ -1,46 +1,47 @@
-const { REST, Routes } = require('discord.js');
-const { clientId, guildId, token } = require('./config.json');
-const fs = require('node:fs');
-const path = require('node:path');
+const fs = require("fs");
+const { REST } = require("@discordjs/rest");
+const { Routes } = require("discord-api-types/v9");
+const { clientId, guildId, token } = require("./config.json");
 
-const commands = [];
-// Grab all the command folders from the commands directory you created earlier
-const foldersPath = path.join(__dirname, 'commands');
-const commandFolders = fs.readdirSync(foldersPath);
+const commandFiles = fs
+  .readdirSync("./commands")
+  .filter((file) => file.endsWith(".js"));
 
-for (const folder of commandFolders) {
-	// Grab all the command files from the commands directory you created earlier
-	const commandsPath = path.join(foldersPath, folder);
-	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-	// Grab the SlashCommandBuilder#toJSON() output of each command's data for deployment
-	for (const file of commandFiles) {
-		const filePath = path.join(commandsPath, file);
-		const command = require(filePath);
-		if ('data' in command && 'execute' in command) {
-			commands.push(command.data.toJSON());
-		} else {
-			console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-		}
-	}
-}
+const commands = commandFiles.map((file) => {
+  const command = require(`./commands/${file}`);
+  return command.data.toJSON();
+});
 
-// Construct and prepare an instance of the REST module
-const rest = new REST().setToken(token);
+const rest = new REST({ version: "9" }).setToken(token);
 
-// and deploy your commands!
-(async () => {
-	try {
-		console.log(`Started refreshing ${commands.length} application (/) commands.`);
+const existingCommands = rest
+  .get(Routes.applicationGuildCommands(clientId, guildId))
+  .then((response) => response.map((command) => command.id))
+  .catch(console.error);
 
-		// The put method is used to fully refresh all commands in the guild with the current set
-		const data = await rest.put(
-			Routes.applicationGuildCommands(clientId, guildId),
-			{ body: commands },
-		);
+Promise.all([existingCommands, commands])
+  .then(([existingCommandIds, newCommandNames]) => {
+    const commandsToDelete = existingCommandIds.filter(
+      (commandId) => !newCommandNames.includes(commandId)
+    );
 
-		console.log(`Successfully reloaded ${data.length} application (/) commands.`);
-	} catch (error) {
-		// And of course, make sure you catch and log any errors!
-		console.error(error);
-	}
-})();
+    if (commandsToDelete.length > 0) {
+      return Promise.all(
+        commandsToDelete.map((commandId) =>
+          rest
+            .delete(
+              Routes.applicationGuildCommand(clientId, guildId, commandId)
+            )
+            .then(() => console.log(`명령어 ${commandId} 삭제됨.`))
+            .catch(console.error)
+            )
+            );
+    }
+  })
+  .then(() => {
+    return rest
+      .put(Routes.applicationGuildCommands(clientId, guildId), { body: commands })
+      .then(() => console.log("명령어 등록/업데이트 완료"))
+      .catch(console.error);
+  })
+  .catch(console.error);
