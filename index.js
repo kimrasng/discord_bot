@@ -14,8 +14,18 @@ for (const file of commandFiles) {
   client.commands.set(command.data.name, command);
 }
 
+// Array of status messages
+const statusMessages = ["/help로 명령어확인", "열심히 대답"];
+
 client.once("ready", () => {
   console.log("서버 준비 완료!");
+
+  // Function to change status message every 4 seconds
+  setInterval(() => {
+    const randomIndex = Math.floor(Math.random() * statusMessages.length);
+    const newStatus = statusMessages[randomIndex];
+    client.user.setActivity(newStatus);
+  }, 6000);
 });
 
 client.on("interactionCreate", async (interaction) => {
