@@ -1,2 +1,1 @@
-# discord_bot
-my new discord bot
+# 레생봇(이름 추천 받아요)
