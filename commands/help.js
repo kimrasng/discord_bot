@@ -13,6 +13,7 @@ module.exports = {
               { name: "/help", value: "레생봇의 명령어를 출력합니다." },
               { name: "/서버", value: "현재 서버의 정보를 출력합니다." },
               { name: "/ping", value: "현재 봇의 핑을 측정하고 출력합니다." },
+              { name: "/day", value: "오늘의 날짜, 요일, 현재 시간 정보를 출력합니다." },
             );
         
         await interaction.deferReply();

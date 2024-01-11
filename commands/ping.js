@@ -4,7 +4,7 @@ const { MessageEmbed } = require("discord.js");
 module.exports = {
   data: new SlashCommandBuilder()
     .setName("ping")
-    .setDescription("현재 디스코드 봇의 핑을 출력합니다."),
+    .setDescription("현재 디스코드 봇의 핑을 측정하고 출력합니다."),
   async execute(interaction) {
     const ping = Date.now() - interaction.createdTimestamp;
 
