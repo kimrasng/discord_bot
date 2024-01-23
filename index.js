@@ -2,7 +2,7 @@ const { Client, Collection, Intents } = require("discord.js");
 const { token } = require("./config.json");
 const fs = require("fs");
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS] });
+const client = new Client({ intents: [Intents.FLAGS.GUILDS], partials: ['MESSAGE', 'CHANNEL', 'REACTION'] });
 
 client.commands = new Collection();
 const commandFiles = fs
@@ -14,15 +14,11 @@ for (const file of commandFiles) {
   client.commands.set(command.data.name, command);
 }
 
-// Array of status messages
 const statusMessages = ["/help로 명령어확인", "열심히 대답"];
 
 client.once("ready", () => {
   console.log("서버 준비 완료!");
-  
-  //deploy-commands.js 자동시작
-  require('./deploy-commands.js');
-  
+
   setInterval(() => {
     const randomIndex = Math.floor(Math.random() * statusMessages.length);
     const newStatus = statusMessages[randomIndex];
@@ -30,21 +26,26 @@ client.once("ready", () => {
   }, 6000);
 });
 
-client.on("interactionCreate", async (interaction) => {
-  if (!interaction.isCommand()) return;
+client.on("messageCreate", async (message) => {
+  if (message.author.bot) return; // Ignore messages from bots
 
-  const command = client.commands.get(interaction.commandName);
+  // Check if the message starts with the specified command prefix
+  if (message.content.startsWith("/")) {
+    const args = message.content.slice(1).trim().split(/ +/);
+    const commandName = args.shift().toLowerCase();
 
-  if (!command) return;
+    // Check if the command exists
+    const command = client.commands.get(commandName);
 
-  try {
-    await command.execute(interaction);
-  } catch (error) {
-    console.error(error);
-    await interaction.reply({
-      content: "There was an error while executing this command!",
-      ephemeral: true,
-    });
+    if (!command) return; // Command not found
+
+    try {
+      // Execute the command
+      await command.execute(message, args);
+    } catch (error) {
+      console.error(error);
+      message.reply("There was an error while executing this command!");
+    }
   }
 });
 
