@@ -19,8 +19,10 @@ const statusMessages = ["/help로 명령어확인", "열심히 대답"];
 
 client.once("ready", () => {
   console.log("서버 준비 완료!");
-
-  // Function to change status message every 4 seconds
+  
+  //deploy-commands.js 자동시작
+  require('./deploy-commands.js');
+  
   setInterval(() => {
     const randomIndex = Math.floor(Math.random() * statusMessages.length);
     const newStatus = statusMessages[randomIndex];
