@@ -1,51 +1,47 @@
-const { Client, Collection, Intents } = require("discord.js");
-const { token } = require("./config.json");
-const fs = require("fs");
+const { Client, Collection, Events, GatewayIntentBits } = require('discord.js');
+const fs = require('fs');
 
-const client = new Client({ intents: [Intents.FLAGS.GUILDS], partials: ['MESSAGE', 'CHANNEL', 'REACTION'] });
+const { token, clientId, guildId } = require('./config.json');
+
+const client = new Client({ intents: [GatewayIntentBits.Guilds], partials: ['MESSAGE', 'CHANNEL', 'REACTION'] });
 
 client.commands = new Collection();
-const commandFiles = fs
-  .readdirSync("./commands")
-  .filter((file) => file.endsWith(".js"));
+const commandFiles = fs.readdirSync('./commands').filter(file => file.endsWith('.js'));
 
 for (const file of commandFiles) {
   const command = require(`./commands/${file}`);
   client.commands.set(command.data.name, command);
 }
 
-const statusMessages = ["/help로 명령어확인", "열심히 대답"];
+const statusMessages = ["안녕하세요", "반가워요"];
 
-client.once("ready", () => {
-  console.log("서버 준비 완료!");
+client.once(Events.ClientReady, readyClient => {
+  console.log(`디스코드봇 ${readyClient.user.tag}이 작동을 시작했습니다.`);
+
+  require('./deploy-commands.js');
 
   setInterval(() => {
-    const randomIndex = Math.floor(Math.random() * statusMessages.length);
-    const newStatus = statusMessages[randomIndex];
-    client.user.setActivity(newStatus);
-  }, 6000);
+	const index = Math.floor(Math.random() * statusMessages.length);
+	readyClient.user.setActivity(statusMessages[index], { type: 'PLAYING' });
+  }, 10000);
+
 });
 
-client.on("messageCreate", async (message) => {
-  if (message.author.bot) return; // Ignore messages from bots
+client.on("interactionCreate", async (interaction) => {
+  if (!interaction.isCommand()) return;
 
-  // Check if the message starts with the specified command prefix
-  if (message.content.startsWith("/")) {
-    const args = message.content.slice(1).trim().split(/ +/);
-    const commandName = args.shift().toLowerCase();
+  const command = client.commands.get(interaction.commandName);
 
-    // Check if the command exists
-    const command = client.commands.get(commandName);
+  if (!command) return;
 
-    if (!command) return; // Command not found
-
-    try {
-      // Execute the command
-      await command.execute(message, args);
-    } catch (error) {
-      console.error(error);
-      message.reply("There was an error while executing this command!");
-    }
+  try {
+    await command.execute(interaction);
+  } catch (error) {
+    console.error(error);
+    await interaction.reply({
+      content: "There was an error while executing this command!",
+      ephemeral: true,
+    });
   }
 });
 
